@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Password Estimator (Flask backend)</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 1.2rem; }
+    label { display:block; margin-top:.8rem; }
+    input[type="text"], input[type="number"] { width:100%; padding:.5rem; font-size:1rem; }
+    button { margin-top:1rem; padding:.6rem 1rem; font-size:1rem; }
+    pre { background:#f4f4f4; padding:1rem; white-space:pre-wrap; }
+  </style>
+</head>
+<body>
+  <h2>Password Crack Time Estimator (Uses your Python backend)</h2>
+  <p>Enter a password and the app will call the Flask backend to compute the estimate. (Server must be deployed/started.)</p>
+
+  <label>Password:
+    <input id="password" type="text" placeholder="Type a password">
+  </label>
+
+  <button id="calc">Estimate (call backend)</button>
+
+  <h3>Result</h3>
+  <pre id="out">No result yet.</pre>
+
+  <script>
+  async function postEstimate(password){
+    const resp = await fetch('/estimate', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({password})
+    });
+    return resp.json();
+  }
+
+  document.getElementById('calc').addEventListener('click', async ()=>{
+    const pw = document.getElementById('password').value || '';
+    const out = document.getElementById('out');
+    out.textContent = 'Waiting for server...';
+    try{
+      const res = await postEstimate(pw);
+      if(res.error){ out.textContent = 'Error: ' + res.error; return; }
+      let txt = '';
+      txt += 'Charset size (S): ' + res.charset_size + '\n';
+      txt += 'Length (L): ' + res.length + '\n';
+      if(res.time_seconds !== undefined){
+        txt += 'Time (seconds): ' + res.time_seconds + '\n';
+        if(res.time_days) txt += 'Which is (days): ' + res.time_days + '\n';
+        if(res.time_months) txt += 'Which is (months): ' + res.time_months + '\n';
+      } else if(res.time_seconds_scientific){
+        txt += 'Time (approx, scientific): ' + res.time_seconds_scientific + '\n';
+      }
+      out.textContent = txt;
+    }catch(e){
+      out.textContent = 'Request failed: ' + e.message;
+    }
+  });
+  </script>
+</body>
+</html>
